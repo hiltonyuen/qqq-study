@@ -3,14 +3,22 @@ import yfinance as yf
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import requests # 🔴 新增：用嚟做偽裝嘅工具
 
 st.set_page_config(layout="wide", page_title="QQQ 專業撈底系統")
 st.title("📊 QQQ 專業量化分析：X年一遇撈底系統")
 
-# 🔴 核心改動：加咗 ttl=86400 (即係 24 小時)，系統每日會自動清暫存並獲取最新數據
 @st.cache_data(ttl=86400)
 def load_data():
-    qqq = yf.Ticker("QQQ").history(start="1999-01-01")
+    # 🔴 核心破解：建立一個偽裝成普通瀏覽器嘅 Session，破解 Yahoo 封鎖
+    session = requests.Session()
+    session.headers.update({
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    })
+    
+    # 將 session 加入去 yfinance 請求入面
+    qqq = yf.Ticker("QQQ", session=session).history(start="1999-01-01")
+    
     if qqq.index.tz is not None:
         qqq.index = qqq.index.tz_convert(None)
     
@@ -169,7 +177,6 @@ if best_events:
     for ev_date in best_events:
         buy_price = full_data.loc[ev_date, 'Close']
         
-        # 計算 1 年後回報
         one_year_later = ev_date + pd.DateOffset(years=1)
         if one_year_later <= latest_date:
             closest_1y_idx = full_data.index.get_indexer([one_year_later], method='nearest')[0]
@@ -179,7 +186,6 @@ if best_events:
         else:
             ret_1y_str = "未滿一年"
             
-        # 計算 3 年後回報
         three_years_later = ev_date + pd.DateOffset(years=3)
         if three_years_later <= latest_date:
             closest_3y_idx = full_data.index.get_indexer([three_years_later], method='nearest')[0]
@@ -189,11 +195,9 @@ if best_events:
         else:
             ret_3y_str = "未滿三年"
 
-        # 計算持倉年數同至今總回報
         hold_years = (latest_date - ev_date).days / 365.25
         tot_ret = (latest_price - buy_price) / buy_price
         
-        # 計算平均年回報 (單利) 同 平均複利 (CAGR)
         if hold_years > 0:
             avg_annual_ret = tot_ret / hold_years
             cagr = ((latest_price / buy_price) ** (1 / hold_years)) - 1
@@ -212,10 +216,8 @@ if best_events:
             "複式回報 (CAGR)": f"{cagr*100:.1f}%"
         })
 
-    # 將結果轉做表格顯示
     res_df = pd.DataFrame(results)
     
-    # Highlight 正數綠色，負數紅色
     def highlight_positive(val):
         if isinstance(val, str) and '%' in val:
             num = float(val.replace('%', ''))
