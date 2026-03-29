@@ -3,21 +3,14 @@ import yfinance as yf
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import requests # 🔴 新增：用嚟做偽裝嘅工具
 
 st.set_page_config(layout="wide", page_title="QQQ 專業撈底系統")
 st.title("📊 QQQ 專業量化分析：X年一遇撈底系統")
 
 @st.cache_data(ttl=86400)
 def load_data():
-    # 🔴 核心破解：建立一個偽裝成普通瀏覽器嘅 Session，破解 Yahoo 封鎖
-    session = requests.Session()
-    session.headers.update({
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-    })
-    
-    # 將 session 加入去 yfinance 請求入面
-    qqq = yf.Ticker("QQQ", session=session).history(start="1999-01-01")
+    # 刪除咗手動面具，由得 yfinance 自己用最新防 block 技術
+    qqq = yf.Ticker("QQQ").history(start="1999-01-01")
     
     if qqq.index.tz is not None:
         qqq.index = qqq.index.tz_convert(None)
